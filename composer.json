@@ -1,0 +1,19 @@
+{
+    "name": "scrimmy/weather",
+    "autoload": {
+        "psr-4": {
+            "Scrimmy\\Weather\\": "app/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Kirill",
+            "email": "kirillvorobiev.dev@yandex.ru"
+        }
+    ],
+    "require": {
+        "symfony/dotenv": "^6.2",
+        "ext-pdo": "*",
+        "ext-curl": "*"
+    }
+}

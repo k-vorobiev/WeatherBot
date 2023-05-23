@@ -2,6 +2,7 @@
 
 namespace Scrimmy\Weather\Service;
 
+use Scrimmy\Weather\Helper\HelperFunction;
 use Symfony\Component\Dotenv\Dotenv;
 
 class WeatherService
@@ -15,7 +16,7 @@ class WeatherService
         $this->token = $_ENV['WEATHER_TOKEN'];
     }
 
-    protected function getCityDb($city)
+    protected function getCityDb(string $city)
     {
         $conn = new DatabaseService();
 
@@ -35,7 +36,7 @@ class WeatherService
         }
     }
 
-    protected function setCityDb($cityName, $cityLat, $cityLon)
+    protected function setCityDb(string $cityName, float $cityLat, float $cityLon)
     {
         $conn = new DatabaseService();
 
@@ -52,7 +53,7 @@ class WeatherService
         }
     }
 
-    public function getCityData($city)
+    public function getCityData(string $city)
     {
         $cityDb = $this->getCityDb($city);
 
@@ -103,7 +104,7 @@ class WeatherService
         }
     }
 
-    public function getCityWeather($city)
+    public function getCityWeather(string $city)
     {
         if (preg_match('/[^а-я А-Я]+$/u', $city)) {
             return array (
@@ -143,10 +144,10 @@ class WeatherService
             $temp = round($response->main->temp);
             $desc = $weather->description;
 
-            $message = "Погода в городе $city: " . PHP_EOL . "$temp градусов цельсия. " . PHP_EOL . ucfirst($desc);
-
             return array (
-                'message' => $message,
+                'city' => $city,
+                'temp' => $temp,
+                'status' => $desc,
             );
         } else {
             return array (
@@ -154,4 +155,88 @@ class WeatherService
             );
         }
     }
+
+    private function getStatus($status)
+    {
+        $statusArray = [
+            'ясно' => 'sunny',
+            'облачно с прояснениями' => 'cloudy-with-clarifications',
+            'пасмурно' => 'dull',
+            'небольшой дождь' => 'rain',
+            'небольшой снегопад' => 'small-snowfall',
+            'переменная облачность' => 'partly-cloudy',
+        ];
+
+        if (array_key_exists($status, $statusArray)) {
+            return $statusArray[$status];
+        }
+
+        return 'null';
+    }
+
+    public function getWeatherImage(array $params)
+    {
+        $city = $params['city'];
+        $temp = $params['temp'];
+        $status = $this->getStatus($params['status']);
+        $helper = (new HelperFunction());
+
+        // Ширина и высота изображения
+        $width = 550;
+        $height = 300;
+
+        // Размер текста
+        $mainSize = 30;
+        $descSize = 20;
+        // Создаём изображение
+        $image = imagecreatetruecolor($width, $height);
+        // Указываем шрифт
+        $font = ABSPATH . '/public/font/font.otf';
+        // Указываем иконку для статуса погоды
+        $icon = imagecreatefrompng(ABSPATH . '/public/icon/' . strtolower($status) . '.png');
+        // Указываем цвета
+        $textColor = imagecolorallocate($image, 229, 229, 229);
+        $backgroundColor = imagecolorallocate($image, 24, 24, 26);
+        // Центр изображения
+        $center = $width / 2;
+
+        // Заливаем прямоугольник белым цветом
+        imagefilledrectangle($image, 0, 0, $width, $height, $backgroundColor);
+
+        // Координаты центра для текстов
+        $cityCenter = imagettfbbox($mainSize, 0, $font, $helper->ru_ucfirst($city));
+        $tempCenter = imagettfbbox($mainSize, 0, $font, $params['temp']);
+        $descCenter = imagettfbbox($descSize, 0, $font, $helper->ru_ucfirst($params['status']));
+        // Координаты левого края для текстов
+        $cityLeft = $center - round(($cityCenter[2] - $cityCenter[0]) / 2);
+        $tempLeft = $center - round(($tempCenter[2] - $tempCenter[0]) / 2);
+        $descLeft = $center - round(($descCenter[2] - $descCenter[0]) / 2);
+
+        // Текст города
+        imagefttext($image, $mainSize, 0, $cityLeft, 60, $textColor, $font, $helper->ru_ucfirst($city));
+        // Вставляем иконку
+        list($iconWidth, $iconHeight) = getimagesize(ABSPATH . '/public/icon/' . strtolower($status) . '.png');
+        $iconLeft = ($width - $iconWidth) / 2;
+        imagecopy($image, $icon, $iconLeft, 100, 0, 0, $iconWidth, $iconHeight);
+
+        // Текст температуры
+        imagefttext($image, $mainSize, 0, $tempLeft, 220, $textColor, $font, $temp);
+
+        // Текст описания
+        imagefttext($image, $descSize, 0, $descLeft, 270, $textColor, $font, $helper->ru_ucfirst($params['status']));
+
+        // Сохраняем альфа-прозрачность
+        imagesavealpha($image, true);
+        imagealphablending($image, false);
+
+        // Создаем изображение в формате .webp
+        $filename = 'result' . time() . '.webp';
+        imagewebp($image, 'temp/' . $filename, 100);
+        // Уничтожаем из памяти объект
+        imagedestroy($icon);
+        imagedestroy($image);
+
+        return $filename;
+    }
+
 }

@@ -19,15 +19,17 @@ $messageData = $telegram->getUserCommand($message);
 $command = $messageData['command'];
 $userText = $messageData['text'];
 
-$commands = array(
-    //'/start' => (new StartCommand())->message($sendData),
-    '/погода' => (new WeatherCommand())->getImage($userText),
-);
+/*$commands = array(
+    '/start' => (new StartCommand())->handle($sendData),
+    '/погода' => (new WeatherCommand())->handle($sendData, $userText),
+);*/
 
-if (!empty($command) && array_key_exists($command, $commands)) {
-    $sendData['text'] = $commands[$command];
+if (!empty($command)) {
+    if ($command == '/погода') {
+        (new WeatherCommand())->handle($sendData, $userText);
+    } else if ($command == '/start') {
+        (new StartCommand())->handle($sendData);
+    }
 } else {
     $sendData['text'] = 'Не удалось найти команду ' . $command;
 }
-
-$telegram->sendMessage($sendData);

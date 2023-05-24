@@ -16,18 +16,26 @@ class WeatherCommand
         $this->weather = new WeatherService();
     }
 
-    public function getImage(string $city)
+    public function handle($data, $city)
     {
         if (!empty($city)) {
-            $cityWeather = $this->weather->getCityWeather($city);
+            $weather = $this->weather->getCityWeather($city);
 
             if (!isset($weather['error'])) {
-                return $this->weather->getWeatherImage($cityWeather);
+                $photo = 'temp/' . $this->weather->getWeatherImage($weather);
+                $data['photo'] = curl_file_create($photo, 'image/webp', 'result.webp');
+
+                $this->telegram->sendPhoto($data);
+                unlink($photo);
             }
 
-            return $cityWeather['error'];
+            $data['text'] = $weather['error'];
+
+            return $this->telegram->sendMessage($data);
         }
 
-        return 'Не указан город';
+        $data['text'] = 'Не указан город';
+
+        return $this->telegram->sendMessage($data);
     }
 }

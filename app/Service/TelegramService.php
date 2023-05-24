@@ -38,8 +38,22 @@ class TelegramService
             CURLOPT_HEADER => 0,
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_URL => $this->url . 'sendMessage',
-            CURLOPT_POSTFIELDS => json_encode($data),
-            CURLOPT_HTTPHEADER => array_merge(['Content-Type: application/json'], $headers),
+            CURLOPT_POSTFIELDS => $data,
+        ]);
+
+        curl_exec($ch);
+        curl_close($ch);
+    }
+
+    public function sendPhoto(array $data, array $headers = [])
+    {
+        $ch = curl_init();
+        curl_setopt_array($ch, [
+            CURLOPT_POST => 1,
+            CURLOPT_HEADER => 0,
+            CURLOPT_RETURNTRANSFER => 1,
+            CURLOPT_URL => $this->url . 'sendPhoto',
+            CURLOPT_POSTFIELDS => $data,
         ]);
 
         curl_exec($ch);

@@ -6,7 +6,6 @@ use Scrimmy\Weather\Service\TelegramService;
 
 class StartCommand
 {
-    protected string $message = "Для использования бота, напишите /погода <Город>";
     public TelegramService $telegram;
 
     public function __construct()
@@ -14,9 +13,9 @@ class StartCommand
         $this->telegram = new TelegramService();
     }
 
-    public function message($data): string
+    public function handle($data): string
     {
-        $data['text'] = $this->message;
+        $data['text'] = "Для использования бота, напишите /погода <Город>";
         return $this->telegram->sendMessage($data);
     }
 }

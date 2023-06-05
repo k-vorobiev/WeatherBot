@@ -30,23 +30,30 @@ class TelegramService
         return file_get_contents($request);
     }
 
-    public function sendMessage(array $data, array $headers = [])
+    public function sendMessage(string $chatId, string $message, array $headers = [])
     {
+        $bot['chat_id'] = $chatId;
+        $bot['text'] = !empty($message) ? $message : '';
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_POST => 1,
             CURLOPT_HEADER => 0,
             CURLOPT_RETURNTRANSFER => 1,
             CURLOPT_URL => $this->url . 'sendMessage',
-            CURLOPT_POSTFIELDS => $data,
+            CURLOPT_POSTFIELDS => $bot,
         ]);
 
         curl_exec($ch);
         curl_close($ch);
     }
 
-    public function sendPhoto(array $data, array $headers = [])
+    public function sendPhoto(string $chatId, string $photo, array $headers = [])
     {
+        $data['chat_id'] = $chatId;
+        if (!empty($photo)) {
+            $data['photo'] = curl_file_create($photo, 'image/webp', 'result.webp');
+        }
+
         $ch = curl_init();
         curl_setopt_array($ch, [
             CURLOPT_POST => 1,
@@ -58,26 +65,5 @@ class TelegramService
 
         curl_exec($ch);
         curl_close($ch);
-    }
-
-    public function getUserCommand($message)
-    {
-        $command = '';
-        $text = '';
-        $lenght = strlen($message);
-
-        $delimiter = strpos($message, ' ');
-
-        if ($delimiter) {
-            $command = substr($message, 0, $delimiter);
-            $text = substr($message, $delimiter + 1, $lenght - 1);
-        } else {
-            $command = $message;
-        }
-
-        return array(
-            'command' => $command,
-            'text' => $text,
-        );
     }
 }

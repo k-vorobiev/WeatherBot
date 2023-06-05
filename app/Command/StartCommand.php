@@ -2,20 +2,12 @@
 
 namespace Scrimmy\Weather\Command;
 
-use Scrimmy\Weather\Service\TelegramService;
+use Scrimmy\Weather\Interface\CommandInterface;
 
-class StartCommand
+class StartCommand implements CommandInterface
 {
-    public TelegramService $telegram;
-
-    public function __construct()
+    public function handle($bot, $chatId, $data = null)
     {
-        $this->telegram = new TelegramService();
-    }
-
-    public function handle($data): string
-    {
-        $data['text'] = "Для использования бота, напишите /погода <Город>";
-        return $this->telegram->sendMessage($data);
+        $bot->sendMessage($chatId, 'Для использования бота используйте команду /weather <Город>');
     }
 }

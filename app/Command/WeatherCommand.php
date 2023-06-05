@@ -2,40 +2,33 @@
 
 namespace Scrimmy\Weather\Command;
 
-use Scrimmy\Weather\Service\TelegramService;
+use Scrimmy\Weather\Interface\CommandInterface;
 use Scrimmy\Weather\Service\WeatherService;
 
-class WeatherCommand
+class WeatherCommand implements CommandInterface
 {
-    public TelegramService $telegram;
-    public WeatherService $weather;
+    private WeatherService $weather;
 
     public function __construct()
     {
-        $this->telegram = new TelegramService();
         $this->weather = new WeatherService();
     }
 
-    public function handle($data, $city)
+    public function handle($bot, $chatId, $data)
     {
-        if (!empty($city)) {
-            $weather = $this->weather->getCityWeather($city);
-
-            if (!isset($weather['error'])) {
-                $photo = 'temp/' . $this->weather->getWeatherImage($weather);
-                $data['photo'] = curl_file_create($photo, 'image/webp', 'result.webp');
-
-                $this->telegram->sendPhoto($data);
-                unlink($photo);
-            }
-
-            $data['text'] = $weather['error'];
-
-            return $this->telegram->sendMessage($data);
+        if (empty($data)) {
+            return $bot->sendMessage($chatId, 'Не указан город');
         }
 
-        $data['text'] = 'Не указан город';
+        $weather = $this->weather->getCityWeather($data);
 
-        return $this->telegram->sendMessage($data);
+        if (isset($weather['error'])) {
+            return $bot->sendMessage($chatId, $weather['error']);
+        }
+
+        $pic = 'temp/' . $this->weather->getWeatherImage($weather);
+        $bot->sendPhoto($chatId, $pic);
+
+        unlink($pic);
     }
 }

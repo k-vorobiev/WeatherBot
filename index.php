@@ -1,35 +1,67 @@
 <?php
 
-use Scrimmy\Weather\Command\StartCommand;
-use Scrimmy\Weather\Command\WeatherCommand;
 use Scrimmy\Weather\Service\TelegramService;
+use Scrimmy\Weather\Interface\CommandInterface;
 
 require_once 'vendor/autoload.php';
 
 const ABSPATH = __DIR__;
 
-$telegram = new TelegramService();
-$data = json_decode(file_get_contents('php://input'), true);
-$message = mb_strtolower($data['message']['text'],'utf-8');
-$chat = $data['message']['chat'];
+class TelegramWeather {
+    protected TelegramService $bot;
+    protected array $update;
 
-$sendData['chat_id'] = $data['message']['chat']['id'];
-
-$messageData = $telegram->getUserCommand($message);
-$command = $messageData['command'];
-$userText = $messageData['text'];
-
-/*$commands = array(
-    '/start' => (new StartCommand())->handle($sendData),
-    '/погода' => (new WeatherCommand())->handle($sendData, $userText),
-);*/
-
-if (!empty($command)) {
-    if ($command == '/погода') {
-        (new WeatherCommand())->handle($sendData, $userText);
-    } else if ($command == '/start') {
-        (new StartCommand())->handle($sendData);
+    public function __construct()
+    {
+        $this->bot = new TelegramService();
+        $this->update = json_decode(file_get_contents('php://input'), true);
     }
-} else {
-    $sendData['text'] = 'Не удалось найти команду ' . $command;
+
+    public function handleRequest(): void
+    {
+        $userInput = mb_strtolower($this->update['message']['text'],'utf-8');
+        $handingInput = $this->splitCommand($userInput);
+
+        $command = $this->getCommand($handingInput['command']);
+        $data = $handingInput['data'];
+        $chatId = $this->update['message']['chat']['id'];
+
+        if (!empty($command) && $command instanceof CommandInterface) {
+            $command->handle($this->bot, $chatId, $data);
+        } else {
+            $this->bot->sendMessage($chatId, 'Данная команда не найдена');
+        }
+    }
+
+    public function getCommand($commandText): ?CommandInterface
+    {
+        $className = ucfirst(strtolower(trim($commandText, '/'))) . 'Command';
+        $commandsPath = 'app/Command/' . $className . '.php';
+        $fullClassName = 'Scrimmy\Weather\Command\\' . $className;
+
+        if (file_exists($commandsPath)) {
+            require_once $commandsPath;
+
+            if (class_exists($fullClassName)) {
+                return new $fullClassName;
+            }
+        }
+
+        return null;
+    }
+
+    public function splitCommand($userInput): array
+    {
+        $parts = explode(' ', $userInput, 2);
+
+        $command = $parts[0];
+        $text = $parts[1] ?? '';
+
+        return [
+            'command' => $command,
+            'data' => $text
+        ];
+    }
 }
+
+(new TelegramWeather())->handleRequest();
